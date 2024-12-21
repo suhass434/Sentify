@@ -11,8 +11,6 @@ from datetime import datetime, timedelta
 # import os
 # secrets = UserSecretsClient()
 
-
-
 class ContentAnalyzer:
     def __init__(self, reddit_credentials, news_api_key):
         self.vader = SentimentIntensityAnalyzer()
@@ -20,7 +18,11 @@ class ContentAnalyzer:
         self.news_api_key = news_api_key
         # Initialize free summarizer from Hugging Face
         self.summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-        
+        # Initialize emotion classifier using Hugging Face's zero-shot classification
+        self.emotion_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+        # Initialize aspect-based sentiment analysis model
+        self.aspect_sentiment = pipeline("text-classification", model="siebert/sentiment-roberta-large-english")
+
     def get_sentiment(self, text):
         """Get combined sentiment from VADER and TextBlob"""
         if not isinstance(text, str) or not text.strip():
@@ -34,6 +36,23 @@ class ContentAnalyzer:
         # Convert to 0-100 scale
         normalized_score = int((combined_score + 1) * 50)
         return normalized_score
+
+    def classify_emotions(self, text):
+        """Classify emotions using zero-shot classification"""
+        emotions = ["happy", "sad", "angry", "fearful", "surprised", "neutral"]
+        try:
+            result = self.emotion_classifier(text, candidate_labels=emotions)
+            return {label: score for label, score in zip(result['labels'], result['scores'])}
+        except Exception:
+            return {emotion: 0 for emotion in emotions}
+
+    def analyze_aspect_sentiment(self, text):
+        """Perform aspect-based sentiment analysis"""
+        try:
+            result = self.aspect_sentiment(text)
+            return result[0]['label'], result[0]['score']  # Returns sentiment and confidence score
+        except Exception:
+            return "NEUTRAL", 0.0
 
     def fetch_news(self, query, days=7):
         """Fetch news articles from NewsAPI"""
@@ -96,7 +115,11 @@ class ContentAnalyzer:
         news_texts = []
         for article in news_articles:
             sentiment = self.get_sentiment(article['text'])
+            emotions = self.classify_emotions(article['text'])
+            aspect_sentiment = self.analyze_aspect_sentiment(article['text'])
             article['sentiment'] = sentiment
+            article['emotions'] = emotions
+            article['aspect_sentiment'] = aspect_sentiment
             news_sentiments.append(sentiment)
             news_texts.append(article['text'])
         
@@ -105,7 +128,11 @@ class ContentAnalyzer:
         reddit_texts = []
         for post in reddit_posts:
             sentiment = self.get_sentiment(post['text'])
+            emotions = self.classify_emotions(post['text'])
+            aspect_sentiment = self.analyze_aspect_sentiment(post['text'])
             post['sentiment'] = sentiment
+            post['emotions'] = emotions
+            post['aspect_sentiment'] = aspect_sentiment
             reddit_sentiments.append(sentiment)
             reddit_texts.append(post['text'])
         
@@ -138,6 +165,7 @@ class ContentAnalyzer:
                 'reddit': reddit_summary
             }
         }
+
 def main(query):
     # Initialize with your credentials
     reddit_credentials = {
@@ -163,6 +191,8 @@ def main(query):
         print(f"\nSource: {content['source']}")
         print(f"Title: {content['title']}")
         print(f"Sentiment: {content['sentiment']}/100")
+        print(f"Emotions: {content.get('emotions')}")
+        print(f"Aspect-Based Sentiment: {content.get('aspect_sentiment')}")
         print(f"URL: {content['url']}")
     
     print("\nContent Summaries:")
