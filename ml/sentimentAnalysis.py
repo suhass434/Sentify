@@ -6,10 +6,8 @@ import praw
 import requests
 from transformers import pipeline
 from datetime import datetime, timedelta
-
-# from kaggle_secrets import UserSecretsClient
-# import os
-# secrets = UserSecretsClient()
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 class ContentAnalyzer:
     def __init__(self, reddit_credentials, news_api_key):
@@ -18,11 +16,7 @@ class ContentAnalyzer:
         self.news_api_key = news_api_key
         # Initialize free summarizer from Hugging Face
         self.summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-        # Initialize emotion classifier using Hugging Face's zero-shot classification
-        self.emotion_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-        # Initialize aspect-based sentiment analysis model
-        self.aspect_sentiment = pipeline("text-classification", model="siebert/sentiment-roberta-large-english")
-
+        
     def get_sentiment(self, text):
         """Get combined sentiment from VADER and TextBlob"""
         if not isinstance(text, str) or not text.strip():
@@ -35,24 +29,16 @@ class ContentAnalyzer:
         combined_score = (vader_scores['compound'] * 0.6) + (textblob_score * 0.4)
         # Convert to 0-100 scale
         normalized_score = int((combined_score + 1) * 50)
-        return normalized_score
 
-    def classify_emotions(self, text):
-        """Classify emotions using zero-shot classification"""
-        emotions = ["happy", "sad", "angry", "fearful", "surprised", "neutral"]
-        try:
-            result = self.emotion_classifier(text, candidate_labels=emotions)
-            return {label: score for label, score in zip(result['labels'], result['scores'])}
-        except Exception:
-            return {emotion: 0 for emotion in emotions}
-
-    def analyze_aspect_sentiment(self, text):
-        """Perform aspect-based sentiment analysis"""
-        try:
-            result = self.aspect_sentiment(text)
-            return result[0]['label'], result[0]['score']  # Returns sentiment and confidence score
-        except Exception:
-            return "NEUTRAL", 0.0
+        # Categorize sentiment into Positive, Neutral, Negative
+        if normalized_score >= 75:
+            sentiment_label = 'Positive'
+        elif normalized_score >= 50:
+            sentiment_label = 'Neutral'
+        else:
+            sentiment_label = 'Negative'
+        
+        return normalized_score, sentiment_label
 
     def fetch_news(self, query, days=7):
         """Fetch news articles from NewsAPI"""
@@ -96,6 +82,36 @@ class ContentAnalyzer:
             
         return posts
 
+    def deduplicate_content(self, all_content):
+        """Remove duplicate content using TF-IDF and Cosine Similarity"""
+        if len(all_content) < 2:
+            return all_content  # No need to deduplicate if there's only one item
+        
+        # Extract texts from content
+        texts = [content['text'] for content in all_content]
+        
+        # Vectorize the text using TF-IDF
+        tfidf_vectorizer = TfidfVectorizer(stop_words='english')
+        tfidf_matrix = tfidf_vectorizer.fit_transform(texts)
+        
+        # Calculate cosine similarity
+        cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
+        
+        # Deduplicate content by keeping unique content based on similarity threshold
+        unique_content = []
+        seen_indexes = set()
+        similarity_threshold = 0.8  # Content considered duplicate if similarity > 0.8
+        
+        for i, content in enumerate(all_content):
+            if i not in seen_indexes:
+                unique_content.append(content)
+                # Mark duplicates
+                for j in range(i + 1, len(all_content)):
+                    if cosine_sim[i, j] > similarity_threshold:
+                        seen_indexes.add(j)
+        
+        return unique_content
+
     def summarize_content(self, texts):
         """Summarize multiple pieces of content"""
         combined_text = " ".join(texts)
@@ -110,60 +126,39 @@ class ContentAnalyzer:
         news_articles = self.fetch_news(query)
         reddit_posts = self.fetch_reddit_posts(query)
         
-        # Analyze news sentiments
-        news_sentiments = []
-        news_texts = []
-        for article in news_articles:
-            sentiment = self.get_sentiment(article['text'])
-            emotions = self.classify_emotions(article['text'])
-            aspect_sentiment = self.analyze_aspect_sentiment(article['text'])
-            article['sentiment'] = sentiment
-            article['emotions'] = emotions
-            article['aspect_sentiment'] = aspect_sentiment
-            news_sentiments.append(sentiment)
-            news_texts.append(article['text'])
+        # Combine content from news and reddit
+        all_content = news_articles + reddit_posts
         
-        # Analyze Reddit sentiments
-        reddit_sentiments = []
-        reddit_texts = []
-        for post in reddit_posts:
-            sentiment = self.get_sentiment(post['text'])
-            emotions = self.classify_emotions(post['text'])
-            aspect_sentiment = self.analyze_aspect_sentiment(post['text'])
-            post['sentiment'] = sentiment
-            post['emotions'] = emotions
-            post['aspect_sentiment'] = aspect_sentiment
-            reddit_sentiments.append(sentiment)
-            reddit_texts.append(post['text'])
+        # Deduplicate content
+        unique_content = self.deduplicate_content(all_content)
         
-        # Calculate average sentiments
-        avg_news_sentiment = int(np.mean(news_sentiments)) if news_sentiments else 50
-        avg_reddit_sentiment = int(np.mean(reddit_sentiments)) if reddit_sentiments else 50
-        overall_sentiment = int(np.mean([avg_news_sentiment, avg_reddit_sentiment]))
+        # Analyze sentiments for unique content
+        sentiments = []
+        content_texts = []
+        for content in unique_content:
+            sentiment_score, sentiment_label = self.get_sentiment(content['text'])
+            content['sentiment'] = sentiment_score
+            content['sentiment_label'] = sentiment_label
+            sentiments.append(sentiment_score)
+            content_texts.append(content['text'])
+        
+        # Calculate average sentiment
+        avg_sentiment = int(np.mean(sentiments)) if sentiments else 50
         
         # Get top influential content (highest deviation from neutral sentiment)
-        all_content = news_articles + reddit_posts
         influential_content = sorted(
-            all_content,
+            unique_content,
             key=lambda x: abs(x['sentiment'] - 50),
             reverse=True
         )[:5]
         
         # Generate summaries
-        news_summary = self.summarize_content(news_texts) if news_texts else "No news content available."
-        reddit_summary = self.summarize_content(reddit_texts) if reddit_texts else "No Reddit content available."
+        content_summary = self.summarize_content(content_texts) if content_texts else "No content available."
         
         return {
-            'sentiments': {
-                'news': avg_news_sentiment,
-                'reddit': avg_reddit_sentiment,
-                'overall': overall_sentiment
-            },
+            'sentiment': avg_sentiment,
             'influential_content': influential_content,
-            'summaries': {
-                'news': news_summary,
-                'reddit': reddit_summary
-            }
+            'summary': content_summary
         }
 
 def main(query):
@@ -182,24 +177,17 @@ def main(query):
     
     # Print results
     print("\nSentiment Analysis:")
-    print(f"News Sentiment: {results['sentiments']['news']}/100")
-    print(f"Reddit Sentiment: {results['sentiments']['reddit']}/100")
-    print(f"Overall Sentiment: {results['sentiments']['overall']}/100")
+    print(f"Overall Sentiment: {results['sentiment']}/100")
     
     print("\nMost Influential Content:")
     for content in results['influential_content']:
         print(f"\nSource: {content['source']}")
         print(f"Title: {content['title']}")
-        print(f"Sentiment: {content['sentiment']}/100")
-        print(f"Emotions: {content.get('emotions')}")
-        print(f"Aspect-Based Sentiment: {content.get('aspect_sentiment')}")
+        print(f"Sentiment: {content['sentiment']} - {content['sentiment_label']}")
         print(f"URL: {content['url']}")
     
-    print("\nContent Summaries:")
-    print("\nNews Summary:")
-    print(results['summaries']['news'])
-    print("\nReddit Summary:")
-    print(results['summaries']['reddit'])      
+    print("\nContent Summary:")
+    print(results['summary'])
 
 if __name__ == "__main__":
     query = "Bitcoin"
