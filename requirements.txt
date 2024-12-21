@@ -5,3 +5,5 @@ textblob
 pandas
 numpy
 spacy
+google-play-scraper 
+beautifulsoup4
