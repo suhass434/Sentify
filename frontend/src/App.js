@@ -44,7 +44,8 @@ const App = () => {
                     >
                       {/* Header Section */}
                       <div className="max-w-4xl mx-auto text-center space-y-4 md:space-y-6">
-                        <div className="flex justify-center">
+                        {/* Logo only visible on tablet and up */}
+                        <div className="hidden md:flex justify-center">
                           <motion.div
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -55,15 +56,15 @@ const App = () => {
                               className="group flex items-center justify-center space-x-3 cursor-pointer"
                             >
                               <Sparkles
-                                className="w-8 h-8 md:w-10 md:h-10 text-blue-600 dark:text-blue-400
-                                             group-hover:text-purple-600 dark:group-hover:text-purple-400
-                                             transition-colors duration-300"
+                                className="w-10 h-10 text-blue-600 dark:text-blue-400
+                                          group-hover:text-purple-600 dark:group-hover:text-purple-400
+                                          transition-colors duration-300"
                               />
                               <span
-                                className="text-4xl md:text-5xl lg:text-6xl font-bold
-                                           bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600
-                                           dark:from-blue-400 dark:via-purple-400 dark:to-pink-400
-                                           bg-clip-text text-transparent"
+                                className="text-5xl lg:text-6xl font-bold
+                                          bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600
+                                          dark:from-blue-400 dark:via-purple-400 dark:to-pink-400
+                                          bg-clip-text text-transparent"
                               >
                                 Sentify
                               </span>
@@ -71,9 +72,14 @@ const App = () => {
                           </motion.div>
                         </div>
 
+                        {/* Enhanced mobile text */}
                         <p
-                          className="text-lg md:text-xl lg:text-2xl text-gray-700 dark:text-gray-300
-                                    max-w-2xl mx-auto"
+                          className="text-2xl md:text-xl lg:text-2xl font-bold md:font-normal
+                                    bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500
+                                    dark:from-blue-400 dark:via-purple-400 dark:to-pink-400
+                                    bg-clip-text text-transparent md:text-gray-700 md:dark:text-gray-300
+                                    max-w-2xl mx-auto leading-tight md:leading-normal
+                                    px-4 md:px-0"
                         >
                           Unlock powerful insights with our advanced sentiment analysis across multiple platforms
                         </p>
@@ -136,8 +142,8 @@ const App = () => {
             {/* Footer */}
             <footer
               className="bg-gray-50 dark:bg-gray-800/50 backdrop-blur-lg
-                             border-t border-gray-200 dark:border-gray-700
-                             transition-colors duration-200"
+                         border-t border-gray-200 dark:border-gray-700
+                         transition-colors duration-200"
             >
               <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
@@ -154,32 +160,32 @@ const App = () => {
                       <Link
                         to="/about"
                         className="text-gray-600 dark:text-gray-400
-                                     hover:text-blue-600 dark:hover:text-blue-400
-                                     transition-colors duration-200"
+                                 hover:text-blue-600 dark:hover:text-blue-400
+                                 transition-colors duration-200"
                       >
                         About Us
                       </Link>
                       <Link
                         to="/contact"
                         className="text-gray-600 dark:text-gray-400
-                                     hover:text-blue-600 dark:hover:text-blue-400
-                                     transition-colors duration-200"
+                                 hover:text-blue-600 dark:hover:text-blue-400
+                                 transition-colors duration-200"
                       >
                         Contact
                       </Link>
                       <a
                         href="/privacy"
                         className="text-gray-600 dark:text-gray-400
-                                  hover:text-blue-600 dark:hover:text-blue-400
-                                  transition-colors duration-200"
+                              hover:text-blue-600 dark:hover:text-blue-400
+                              transition-colors duration-200"
                       >
                         Privacy Policy
                       </a>
                       <a
                         href="/terms"
                         className="text-gray-600 dark:text-gray-400
-                                  hover:text-blue-600 dark:hover:text-blue-400
-                                  transition-colors duration-200"
+                              hover:text-blue-600 dark:hover:text-blue-400
+                              transition-colors duration-200"
                       >
                         Terms of Service
                       </a>
@@ -194,9 +200,9 @@ const App = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 rounded-full bg-gray-200 dark:bg-gray-700
-                                  hover:bg-blue-100 dark:hover:bg-blue-500/20
-                                  text-gray-700 dark:text-gray-300
-                                  transition-colors duration-200"
+                              hover:bg-blue-100 dark:hover:bg-blue-500/20
+                              text-gray-700 dark:text-gray-300
+                              transition-colors duration-200"
                       >
                         <svg
                           className="w-5 h-5"
@@ -211,9 +217,9 @@ const App = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 rounded-full bg-gray-200 dark:bg-gray-700
-                                  hover:bg-gray-300 dark:hover:bg-gray-600
-                                  text-gray-700 dark:text-gray-300
-                                  transition-colors duration-200"
+                              hover:bg-gray-300 dark:hover:bg-gray-600
+                              text-gray-700 dark:text-gray-300
+                              transition-colors duration-200"
                       >
                         <Github className="w-5 h-5" />
                       </a>
@@ -223,8 +229,8 @@ const App = () => {
 
                 <div
                   className="mt-6 md:mt-8 pt-6 md:pt-8
-                              border-t border-gray-200 dark:border-gray-700
-                              flex flex-col sm:flex-row justify-between items-center"
+                          border-t border-gray-200 dark:border-gray-700
+                          flex flex-col sm:flex-row justify-between items-center"
                 >
                   <p className="text-gray-600 dark:text-gray-400">
                     &copy; {new Date().getFullYear()} Sentify. All rights reserved.
