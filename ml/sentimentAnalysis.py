@@ -356,11 +356,11 @@ class EnhancedContentAnalyzer:
 def main(query):
     # Initialize with credentials
     reddit_credentials = {
-        'client_id': secrets.get_secret("REDDIT_CLIENT_ID"),
-        'client_secret': secrets.get_secret("REDDIT_CLIENT_SECRET"),
-        'user_agent': secrets.get_secret("REDDIT_USER_AGENT")
+        'client_id': 'dh-pJ2g7bmp5H55tgsth3w',
+        'client_secret': 'L2tiTgDrdwwb9DWtrX19CdbZqYAGsg',
+        'user_agent': 'AI-lluminati'
     }
-    news_api_key = secrets.get_secret("NEWS_API_KEY")
+    news_api_key = 'bc6a8428bd6143798ea88348297f44ec'
     gemini_api_key = secrets.get_secret("GEMINI_API_KEY")
     analyzer = EnhancedContentAnalyzer(reddit_credentials, news_api_key, gemini_api_key)
     
