@@ -362,7 +362,7 @@ def main(query):
     }
     news_api_key = 'bc6a8428bd6143798ea88348297f44ec'
     gemini_api_key = secrets.get_secret("GEMINI_API_KEY")
-    analyzer = EnhancedContentAnalyzer(reddit_credentials, news_api_ke  y, gemini_api_key)
+    analyzer = EnhancedContentAnalyzer(reddit_credentials, news_api_key, gemini_api_key)
     
     # Example analysis
     aspects = ["price", "features", "reliability", "support"]
