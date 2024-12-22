@@ -1,48 +1,11 @@
-import pandas as pd
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from textblob import TextBlob
-from transformers import pipeline
-import spacy
-import re
-from datetime import datetime
-from collections import Counter
+import google.generativeai as genai
 
-from google_play_scraper import reviews, Sort 
-
-# Fetching reviews using Google Play Scraper
-def fetch_reviews_as_dict(app_id, num_reviews=100):
-    all_reviews = []
-    try:
-        for offset in range(0, num_reviews, 150):
-            result, _ = reviews(
-                app_id,
-                lang='en',
-                country='us',
-                sort=Sort.NEWEST,
-                count=min(150, num_reviews - offset)
-            )
-            all_reviews.extend(result)
-        
-        review_dicts = [
-            {
-                "userName": r["userName"],
-                "content": r["content"],
-                "score": r["score"],
-                "date": r["at"].strftime('%Y-%m-%d %H:%M:%S')
-            }
-            for r in all_reviews
-        ]
-        return review_dicts
-    except Exception as e:
-        print(f"Error fetching reviews: {e}")
-        return []
-
-# Sentiment analysis helper functions
 class GooglePlaySentimentAnalyzer:
     def __init__(self):
         self.vader = SentimentIntensityAnalyzer()
         self.nlp = spacy.load('en_core_web_sm')
-        self.summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+        genai.configure(api_key="AIzaSyDVU6y2yc2di3n88zrNSt0USNErvnJ1STE")
+        self.gemini_model = genai.GenerativeModel("gemini-1.5-flash")
     
     def clean_text(self, text):
         if not isinstance(text, str):
@@ -78,18 +41,36 @@ class GooglePlaySentimentAnalyzer:
         }
 
     def generate_summary(self, reviews_data):
+        # Combine all reviews content
         all_text = " ".join([review['content'] for review in reviews_data])
-        max_tokens = 512
+        max_tokens = 3000
         truncated_text = all_text[:max_tokens]
-
+    
         try:
-            initial_summary = self.summarizer(
-                truncated_text,
-                max_length=200,
-                min_length=50,
-                do_sample=False
-            )[0]['summary_text']
-            return initial_summary
+            # Generate content using Google Gemini API with a clear prompt for summary
+            prompt = (
+                "Summarize the following reviews in 3-5 lines, focusing only on key points. "
+                "Do not generate content outside the context of the reviews. "
+                "If the input is not relevant or if the summary is too short, respond with 'Error: Irrelevant content'."
+                f"\n\n{truncated_text}"
+            )
+            response = self.gemini_model.generate_content(prompt)
+            summary = response.text.strip()
+    
+            # Shield query to validate summary length and relevance
+            if not summary or len(summary.split()) < 5:
+                return "Error: Summary is too short or irrelevant."
+    
+            # Validate relevance by comparing keywords in input and output
+            input_keywords = set(truncated_text.lower().split())
+            output_keywords = set(summary.lower().split())
+            common_keywords = input_keywords & output_keywords
+    
+            if len(common_keywords) < 5:  # Threshold for relevance
+                return "Error: Summary appears irrelevant to input text."
+            
+            return summary
+    
         except Exception as e:
             return f"Error generating summary: {str(e)}"
 
@@ -134,7 +115,7 @@ def analyze_google_play_reviews(app_id, num_reviews=100):
 
 if __name__ == "__main__":
     # Example usage:
-    app_id = 'com.facebook.katana' 
+    app_id = 'com.facebook.katana'
     result = analyze_google_play_reviews(app_id)
     
     # Print summarized result
