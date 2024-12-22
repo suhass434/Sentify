@@ -44,7 +44,6 @@ const App = () => {
                     >
                       {/* Header Section */}
                       <div className="max-w-4xl mx-auto text-center space-y-4 md:space-y-6">
-                        {/* Logo only visible on tablet and up */}
                         <div className="hidden md:flex justify-center">
                           <motion.div
                             whileHover={{ scale: 1.05 }}
@@ -135,7 +134,7 @@ const App = () => {
                 <Route path="/about" element={<AboutUs />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
-                <Route path="/platform/:id" element={<PlatformDetails />} />
+                <Route path="/platform/:id" element={<PlatformDetails service={selectedService} />} />
               </Routes>
             </main>
 
