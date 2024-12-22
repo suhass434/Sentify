@@ -11,13 +11,14 @@ from collections import Counter
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.spatial.distance import cosine
+import google.generativeai as genai
 
 from kaggle_secrets import UserSecretsClient
 import os
 secrets = UserSecretsClient()
 
 class EnhancedContentAnalyzer:
-    def __init__(self, reddit_credentials, news_api_key):
+    def __init__(self, reddit_credentials, news_api_key, gemini_api_key):
         self.vader = SentimentIntensityAnalyzer()
         self.reddit = praw.Reddit(**reddit_credentials)
         self.news_api_key = news_api_key
@@ -34,6 +35,8 @@ class EnhancedContentAnalyzer:
             range(35, 65): "Neutral",
             range(65, 101): "Positive"
         }
+        genai.configure(api_key = gemini_api_key)
+        self.gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
     def clean_text(self, text):
         """Enhanced text cleaning with entity and key term retention"""
@@ -256,14 +259,15 @@ class EnhancedContentAnalyzer:
         text_was_truncated = len(all_text) > max_tokens
         
         try:
-            # Generate initial summary
-            initial_summary = self.summarizer(
-                truncated_text,
-                max_length=200,
-                min_length=50,
-                do_sample=False
-            )[0]['summary_text']
-            
+            # Generate summary using Google Gemini
+            prompt = (
+                "Please summarize the following content in 3-5 lines, focusing on the key points. "
+                "Ensure the summary is concise and covers the main aspects of the text."
+                f"\n\n{truncated_text}"
+            )
+            response = self.gemini_model.generate_content(prompt)
+            initial_summary = response.text.strip()
+
             # Analyze emotions in the content
             emotions = [self.analyze_emotions(item['text']) for item in content_items]
             dominant_emotion = Counter(
@@ -293,9 +297,9 @@ class EnhancedContentAnalyzer:
                 f"Trend: {trend_info['trend']} (Confidence: {trend_info['confidence']:.2f})"
             )
             
-            # Append "...." if text was truncated
-            if text_was_truncated:
-                enhanced_summary += " ...."
+            # # Append "...." if text was truncated
+            # if text_was_truncated:
+            #     enhanced_summary += " ...."
             
             return enhanced_summary
         
@@ -357,8 +361,8 @@ def main(query):
         'user_agent': secrets.get_secret("REDDIT_USER_AGENT")
     }
     news_api_key = secrets.get_secret("NEWS_API_KEY")
-    
-    analyzer = EnhancedContentAnalyzer(reddit_credentials, news_api_key)
+    gemini_api_key = secrets.get_secret("GEMINI_API_KEY")
+    analyzer = EnhancedContentAnalyzer(reddit_credentials, news_api_key, gemini_api_key)
     
     # Example analysis
     aspects = ["price", "features", "reliability", "support"]
