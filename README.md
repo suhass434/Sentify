@@ -1,4 +1,4 @@
-# wHACKiest '24 - ### Team - CodeSapiens
+# wHACKiest '24 - CodeSapiens
 
 # Sentify - Sentiment Analysis for Smarter Decisions
 
@@ -31,3 +31,14 @@ With the vast amount of online content and reviews, extracting meaningful insigh
 git clone https://github.com/suhass434/wHACKiest
 cd wHACKiest
 # Follow setup instructions for React and FastAPI as detailed in the docs
+npm start
+```
+### Backend
+```bash
+python3 -m venv env
+source env/bin/activate
+uvicorn app:app --host 0.0.0.0 --port 5001
+node app.js
+uvicorn app1:app  --host 0.0.0.0 --port 5002
+uvicorn app2:app  --host 0.0.0.0 --port 5003
+
