@@ -1,5 +1,4 @@
-# wHACKiest '24
-## Team - CodeSapiens
+# wHACKiest '24 - ### Team - CodeSapiens
 
 # Sentify - Sentiment Analysis for Smarter Decisions
 
