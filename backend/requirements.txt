@@ -1,0 +1,15 @@
+pandas
+numpy
+vaderSentiment
+textblob
+transformers
+praw
+requests
+spacy
+scikit-learn
+scipy
+google-generativeai
+geopy
+pycountry
+google-play-scraper
+sys

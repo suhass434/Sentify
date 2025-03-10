@@ -1,7 +1,0 @@
-transformers
-praw
-vaderSentiment
-textblob
-pandas
-numpy
-spacy
