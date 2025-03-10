@@ -545,12 +545,12 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
 def main(query, location=None):
     # Initialize with credentials
     reddit_credentials = {
-        'client_id': 'q0BqIuBwij75y3uIwXrYXQ',
-        'client_secret': 'wPlzT0fGdHD77mP1Cq_7yE8SX4Ubhw',
-        'user_agent': 'Sentify'
+        'client_id': '',
+        'client_secret': '',
+        'user_agent': ''
     }
-    news_api_key = 'bc6a8428bd6143798ea88348297f44ec'
-    gemini_api_key = 'AIzaSyAagFJNHSe5zDaj2tPoGMBELo5Ol8owNPM'
+    news_api_key = ''
+    gemini_api_key = ''
 
     results = None
 

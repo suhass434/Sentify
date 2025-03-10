@@ -13,7 +13,7 @@ class GooglePlaySentimentAnalyzer:
     def __init__(self):
         self.vader = SentimentIntensityAnalyzer()
         self.nlp = spacy.load('en_core_web_sm')
-        genai.configure(api_key="AIzaSyAagFJNHSe5zDaj2tPoGMBELo5Ol8owNPM")
+        genai.configure(api_key="")
         self.gemini_model = genai.GenerativeModel("gemini-1.5-flash")
     
     def clean_text(self, text):
