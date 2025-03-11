@@ -1,44 +1,55 @@
-# wHACKiest '24 - CodeSapiens
+# **Sentify - Sentiment Analysis for Smarter Decisions**  
 
-# Sentify - Sentiment Analysis for Smarter Decisions
+## **Overview**  
+Sentify is a sentiment analysis tool that helps in smarter decision-making by summarizing and evaluating reviews, news, and social media posts. It provides sentiment scores, emotional insights, and impactful content summaries to enhance understanding and efficiency in evaluating products or services.  
 
-## Overview
-Sentify is a sentiment analysis tool that aids in smarter decision-making by summarizing and evaluating reviews, news, and social media posts related to products, apps, or companies. It offers sentiment scores, emotional insights, and impactful content summaries to enhance understanding and efficiency in evaluating products or services.
+## **Problem Statement**  
+With a vast amount of online content and reviews, extracting meaningful insights can be challenging. Sentify addresses this by providing concise and reliable summaries of opinions spread across various platforms.  
 
-## Problem Statement
-With the vast amount of online content and reviews, extracting meaningful insights for decision-making can be challenging. Sentify addresses this by providing concise and reliable summaries of opinions spread across various platforms.
+## **Objectives**  
+- Perform sentiment analysis, emotion classification, and content summarization.  
+- Provide **location-based insights** for tailored analysis.  
+- Ensure a **user-friendly** and **scalable** system.  
 
-## Objectives
-- Provide sentiment analysis, emotion classification, and impactful content summaries.
-- Offer location-based insights for tailored analysis.
-- Ensure a user-friendly interface for efficient data interaction.
+## **Key Features**  
+✅ **Sentiment & Emotion Analysis**: Uses NLP models for accurate classification.  
+✅ **Content Summarization**: Summarizes reviews, news, and social media posts.  
+✅ **Location-Based Insights**: Enables region-specific sentiment analysis.  
+✅ **Integration**: Google Play review analysis for deeper insights.  
 
-## Key Features
-- **Sentiment and Emotion Analysis**: Utilizes VADER, TextBlob, and DistilRoBERTa-base for sophisticated sentiment and emotion analysis.
-- **Content Summarization**: Incorporates Gemini API and Scapy to summarize relevant content effectively.
-- **Location-Based Insights**: Enables region-specific sentiment analysis to provide insights tailored to specific areas.
-- **Integration**: Google Play integration for in-depth app review analysis.
+## **Tech Stack**  
+### **Frontend:**  
+- ReactJS  
 
-## Tech Stack
-- **Frontend**: ReactJS
-- **Backend**: FastAPI
-- **Database**: MongoDB
-- **NLP & Text Analysis**: VADER, TextBlob, Gemini API, Scapy, DistilRoBERTa-base, Facebook BART
-- **Scraping & Data Fetching**: Google Play Scraper
+### **Backend:**  
+- **Node.js**, Express.js  
 
-## Installation
+### **Database:**  
+- MongoDB  
+
+### **NLP & Text Analysis:**  
+- VADER, TextBlob, Gemini API, DistilRoBERTa-base  
+
+### **Scraping & Data Fetching:**  
+- Google Play Scraper  
+
+## **Installation**  
+
+### **Clone the Repository**  
 ```bash
-git clone https://github.com/suhass434/wHACKiest
-cd wHACKiest
-# Follow setup instructions for React and FastAPI as detailed in the docs
+git clone https://github.com/suhass434/sentify
+cd sentify
+```
+
+### **Backend Setup (Node.js)**  
+```bash
+npm install
+npm run dev
+```
+
+### **Frontend Setup (React.js)**  
+```bash
+cd frontend
+npm install
 npm start
 ```
-### Backend
-```bash
-python3 -m venv env
-source env/bin/activate
-uvicorn app:app --host 0.0.0.0 --port 5001
-node app.js
-uvicorn app1:app  --host 0.0.0.0 --port 5002
-uvicorn app2:app  --host 0.0.0.0 --port 5003
-
