@@ -12,4 +12,4 @@ google-generativeai
 geopy
 pycountry
 google-play-scraper
-sys
+dotenv

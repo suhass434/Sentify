@@ -177,10 +177,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  TrendingUp,
-  TrendingDown,
-  MinusCircle,
-  BarChart2,
   AlertCircle,
   Search,
   Loader2,
@@ -211,7 +207,7 @@ const PlatformDetails = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:5001/api/platforms/${name}`);
+      const response = await fetch(`http://localhost:5001/api/sentiment/analyze-normal/${name}`);
       if (!response.ok) throw new Error('Failed to fetch platform data');
       const data = await response.json();
       setPlatformData(data);

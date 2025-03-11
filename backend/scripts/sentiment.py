@@ -17,9 +17,18 @@ from typing import Dict, List, Optional
 import pycountry
 import sys
 import json
+import contextlib
+import io
+import math
+from dotenv import load_dotenv, find_dotenv
+import os
+from concurrent.futures import ThreadPoolExecutor 
 
 class EnhancedContentAnalyzer:
     def __init__(self, reddit_credentials, news_api_key, gemini_api_key):
+        """
+        Initialize the EnhancedContentAnalyzer with necessary credentials and models.
+        """
         self.vader = SentimentIntensityAnalyzer()
         self.reddit = praw.Reddit(**reddit_credentials)
         self.news_api_key = news_api_key
@@ -40,31 +49,19 @@ class EnhancedContentAnalyzer:
         self.gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
     def clean_text(self, text):
-        """Enhanced text cleaning with entity and key term retention"""
+        """
+        Clean and preprocess text by removing URLs, mentions, hashtags, and retaining important tokens.
+        """
         if not isinstance(text, str):
             return ""
         
-        # Basic cleaning
-        text = re.sub(r'http\S+', '', text)
-        text = re.sub(r'@\w+', '', text)
-        text = re.sub(r'#\w+', '', text)
-        text = re.sub(r'[^\w\s]', ' ', text)
-        
-        # SpaCy processing
-        doc = self.nlp(text)
-        
-        # Keep named entities, important parts of speech, and descriptive terms
-        important_tokens = []
-        for token in doc:
-            if (token.ent_type_ or  # Named entities
-                token.pos_ in ['ADJ', 'VERB', 'NOUN', 'ADV'] or  # Important POS
-                not token.is_stop):  # Non-stop words
-                important_tokens.append(token.text.lower())
-        
-        return ' '.join(important_tokens)
+        text = re.sub(r'http\S+|\@\w+|\#\w+|[^\w\s]', '', text)
+        return ' '.join([word.lower() for word in text.split() if len(word) > 2])
 
     def get_combined_sentiment(self, text):
-        """Enhanced sentiment analysis with normalized scoring and labeling"""
+        """
+        Calculate combined sentiment score using VADER and TextBlob with weighted averaging.
+        """
         cleaned_text = self.clean_text(text)
         
         # VADER sentiment
@@ -106,7 +103,9 @@ class EnhancedContentAnalyzer:
         }
 
     def get_aspect_based_sentiment(self, text, aspects):
-        """Enhanced aspect-based sentiment analysis"""
+        """
+        Perform aspect-based sentiment analysis on the given text.
+        """
         doc = self.nlp(text)
         aspect_sentiments = {}
         
@@ -132,7 +131,9 @@ class EnhancedContentAnalyzer:
         return aspect_sentiments
 
     def analyze_emotions(self, text):
-        """Enhanced emotion detection"""
+        """
+        Analyze emotions in the given text using a pre-trained emotion classification model.
+        """
         try:
             emotion_result = self.emotion_classifier(text)[0]
             return {
@@ -143,7 +144,9 @@ class EnhancedContentAnalyzer:
             return {'emotion': 'neutral', 'confidence': 1.0}
 
     def deduplicate_content(self, texts, threshold=0.8):
-        """Remove near-duplicate content using TF-IDF and cosine similarity"""
+        """
+        Remove near-duplicate content using TF-IDF and cosine similarity.
+        """
         if not texts:  # Handle empty input
             return []
             
@@ -171,7 +174,9 @@ class EnhancedContentAnalyzer:
         return unique_indices
 
     def fetch_news(self, query, days=7):
-        """Fetch news articles from NewsAPI"""
+        """
+        Fetch news articles from NewsAPI for the given query.
+        """
         url = 'https://newsapi.org/v2/everything'
         date_from = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
         
@@ -192,12 +197,14 @@ class EnhancedContentAnalyzer:
                 'text': f"{article['title']} {article['description']}",
                 'url': article['url'],
                 'published_at': article['publishedAt']
-            } for article in articles[:10]]  # Top 10 most relevant articles
+            } for article in articles[:10]]
         except:
             return []
 
     def fetch_reddit_posts(self, query, limit=10):
-        """Fetch Reddit posts"""
+        """
+        Fetch Reddit posts for the given query.
+        """
         posts = []
         subreddit = self.reddit.subreddit('all')
         
@@ -213,7 +220,9 @@ class EnhancedContentAnalyzer:
         return posts
         
     def fetch_content(self, query, limit=50):
-        """Fetch and aggregate content from multiple sources"""
+        """
+        Fetch and aggregate content from multiple sources (NewsAPI and Reddit).
+        """
         # Fetch news articles
         news_articles = self.fetch_news(query)
         
@@ -230,7 +239,9 @@ class EnhancedContentAnalyzer:
         return [all_content[i] for i in unique_indices]
 
     def predict_trend(self, sentiments, window_size=7):
-        """Enhanced trend prediction with confidence scoring"""
+        """
+        Predict sentiment trend using a rolling window approach.
+        """
         if len(sentiments) < window_size:
             return {
                 'trend': "Insufficient data",
@@ -256,7 +267,9 @@ class EnhancedContentAnalyzer:
         }
 
     def generate_summary(self, content_items):
-        """Generate comprehensive summary using all content"""
+        """
+        Generate a summary of the content using Google Gemini.
+        """
         if not content_items:  # Handle empty input
             return "No content available for summary generation."
             
@@ -265,7 +278,7 @@ class EnhancedContentAnalyzer:
         
         # Truncate text if needed
         max_tokens = 512
-        truncated_text = all_text[:max_tokens]  # Rough character estimate
+        truncated_text = ' '.join(all_text.split()[:max_tokens])  # Rough character estimate
         
         try:
             # Generate summary using Google Gemini
@@ -305,14 +318,68 @@ class EnhancedContentAnalyzer:
             
         except Exception as e:
             return f"Error generating summary: {str(e)}"
+        
+    def analyze_query(self, query, aspects=None):
+        """
+        Analyze content for the given query and aspects.
+        """
+        if aspects is None:
+            aspects = ["price", "quality", "features", "service"]
+        
+        # Fetch and analyze content
+        content_items = self.fetch_content(query)
+        
+        # Analyze each piece of content
+        analyzed_content = []
+        for item in content_items:
+            sentiment = self.get_combined_sentiment(item['text'])
+            emotions = self.analyze_emotions(item['text'])
+            aspect_sentiments = self.get_aspect_based_sentiment(item['text'], aspects)
+            
+            analyzed_content.append({
+                'source': item['source'],
+                'title': item.get('title', ''),
+                'url': item.get('url', ''),
+                'sentiment': sentiment,
+                'emotions': emotions,
+                'aspect_sentiments': aspect_sentiments
+            })
+        
+        # Generate overall summary
+        summary = self.generate_summary(content_items)
+        
+        # Calculate aggregated metrics
+        sentiments = [item['sentiment']['score'] for item in analyzed_content]
+        trend = self.predict_trend(sentiments)
+        
+        return {
+            'summary': summary,
+            'analyzed_content': analyzed_content,
+            'trend': trend,
+            'aspects': {
+                aspect: {
+                    'avg_score': np.mean([
+                        content['aspect_sentiments'].get(aspect, {}).get('score', 0)
+                        for content in analyzed_content
+                        if aspect in content['aspect_sentiments']
+                    ])
+                }
+                for aspect in aspects
+            }
+        }
 
 class LocationBasedAnalyzer(EnhancedContentAnalyzer):
     def __init__(self, reddit_credentials, news_api_key, gemini_api_key):
+        """
+        Initialize the LocationBasedAnalyzer with geolocation capabilities.
+        """
         super().__init__(reddit_credentials, news_api_key, gemini_api_key)
         self.geocoder = Nominatim(user_agent="AI-lluminati-location")
         
     def get_location_info(self, location: str) -> Dict:
-        """Get standardized location information"""
+        """
+        Get standardized location information using geocoding.
+        """
         try:
             # Geocode the location
             location_data = self.geocoder.geocode(location, language='en')
@@ -346,7 +413,6 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
                 'state': raw_address.get('state')
             }
         except Exception as e:
-            print(f"Error getting location info: {str(e)}")
             return {
                 'input_location': location,
                 'formatted_address': location,
@@ -358,7 +424,9 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
             }
 
     def get_location_subreddits(self, location_info: Dict) -> List[str]:
-        """Get relevant subreddits for a location"""
+        """
+        Get relevant subreddits for a location.
+        """
         if not location_info:
             return []
             
@@ -388,7 +456,9 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
         return list(set(subreddits))
 
     def fetch_location_news(self, query: str, location_info: Dict, days: int = 7) -> List[Dict]:
-        """Fetch news articles specific to a location"""
+        """
+        Fetch news articles specific to a location.
+        """
         if not location_info:
             return []
             
@@ -429,11 +499,12 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
                 'location': location_info['formatted_address']
             } for article in articles[:15] if article.get('description')]
         except Exception as e:
-            print(f"Error fetching news: {str(e)}")
             return []
 
     def fetch_location_reddit_content(self, query: str, location_info: Dict, limit: int = 15) -> List[Dict]:
-        """Fetch Reddit content specific to a location"""
+        """
+        Fetch Reddit content specific to a location.
+        """
         if not location_info:
             return []
             
@@ -454,13 +525,14 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
                         'location': location_info['formatted_address']
                     })
             except Exception as e:
-                print(f"Error fetching from r/{subreddit_name}: {str(e)}")
                 continue
                 
         return posts
 
     def analyze_location_insights(self, query: str, location: str, aspects: Optional[List[str]] = None) -> Dict:
-        """Main method to analyze content for a specific location"""
+        """
+        Analyze content for a specific location.
+        """
         if aspects is None:
             aspects = ["impact", "local_response", "public_opinion", "concerns"]
             
@@ -485,22 +557,28 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
         unique_indices = self.deduplicate_content(unique_texts)
         content_items = [all_content[i] for i in unique_indices]
         
-        # Analyze content
-        analyzed_content = []
-        for item in content_items:
-            sentiment = self.get_combined_sentiment(item['text'])
-            emotions = self.analyze_emotions(item['text'])
-            aspect_sentiments = self.get_aspect_based_sentiment(item['text'], aspects)
-            
-            analyzed_content.append({
-                'source': item['source'],
-                'title': item.get('title', ''),
-                'url': item.get('url', ''),
-                'location': item.get('location', ''),
-                'sentiment': sentiment,
-                'emotions': emotions,
-                'aspect_sentiments': aspect_sentiments
-                })
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {}
+            analyzed_content = []
+            for item in content_items:
+                futures[executor.submit(self.get_combined_sentiment, item['text'])] = ('sentiment', item)
+                futures[executor.submit(self.analyze_emotions, item['text'])] = ('emotions', item)
+                futures[executor.submit(self.get_aspect_based_sentiment, item['text'], aspects)] = ('aspect_sentiments', item)
+
+            for future in futures:
+                analysis_type, item = futures[future]
+                item[analysis_type] = future.result()
+
+                if analysis_type == 'aspect_sentiments':
+                    analyzed_content.append({
+                        'source': item['source'],
+                        'title': item.get('title', ''),
+                        'url': item.get('url', ''),
+                        'location': item.get('location', ''),
+                        'sentiment': item.get('sentiment', {}),
+                        'emotions': item.get('emotions', {}),
+                        'aspect_sentiments': item.get('aspect_sentiments', {})
+                    })
             
         # Generate location-specific summary
         location_context = (
@@ -517,7 +595,7 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
             for content in analyzed_content:
                 if aspect in content['aspect_sentiments']:
                     aspect_score = content['aspect_sentiments'][aspect].get('score', 0)
-                    if aspect_score > 0:  # Only include non-zero scores
+                    if aspect_score > 0:
                         scores.append(aspect_score)
             
             if scores:
@@ -541,34 +619,51 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
                 'reddit_count': len(reddit_posts)
             }
         }
+    
+def replace_nan_with_null(data):
+    if isinstance(data, dict):
+        return {k: replace_nan_with_null(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [replace_nan_with_null(v) for v in data]
+    elif isinstance(data, float) and math.isnan(data):
+        return None
+    return data
 
 def main(query, location=None):
+    """
+    Main function to analyze content for a given query and location.
+    """
     # Initialize with credentials
+    load_dotenv(find_dotenv())
+
     reddit_credentials = {
-        'client_id': '',
-        'client_secret': '',
-        'user_agent': ''
+        'client_id': os.getenv('REDDIT_CLIENT_ID'),
+        'client_secret': os.getenv('REDDIT_CLIENT_SECRET'), 
+        'user_agent': os.getenv('REDDIT_USER_AGENT')
     }
-    news_api_key = ''
-    gemini_api_key = ''
+    news_api_key = os.getenv('NEWS_API_KEY')
+    gemini_api_key = os.getenv('GEMINI_API_KEY')
 
     results = None
 
-    try:
-        if location:
-            analyzer = LocationBasedAnalyzer(reddit_credentials, news_api_key, gemini_api_key)
-            results = analyzer.analyze_location_insights(query, location)
-        else:
-            analyzer = EnhancedContentAnalyzer(reddit_credentials, news_api_key, gemini_api_key)
-            aspects = ["price", "features", "reliability", "support"]
-            results = analyzer.analyze_query(query, aspects)
+    # Suppress all output except JSON
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        try:
+            if location:
+                analyzer = LocationBasedAnalyzer(reddit_credentials, news_api_key, gemini_api_key)
+                results = analyzer.analyze_location_insights(query, location)
+            else:
+                analyzer = EnhancedContentAnalyzer(reddit_credentials, news_api_key, gemini_api_key)
+                aspects = ["price", "features", "reliability", "support"]
+                results = analyzer.analyze_query(query, aspects)
 
-        # Ensure the result is valid JSON
-        print(json.dumps(results, indent=4))
+        except Exception as e:
+            results = {"error": str(e)}
 
-    except Exception as e:
-        error_response = {"error": str(e)}
-        print(json.dumps(error_response))
+    results = replace_nan_with_null(results)
+    
+    # Print only the JSON output
+    print(json.dumps(results, indent=4))
 
 if __name__ == "__main__":
     query = sys.argv[1] if len(sys.argv) > 1 else "Test"

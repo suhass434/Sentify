@@ -1,1 +1,4 @@
-/credentials.txt
+backend/node_modules
+backend/env
+frontend/node_modules
+.env

@@ -11,8 +11,10 @@ const analyzeSentiment = (req, res) => {
 
     const scriptPath = path.join(__dirname, '../scripts/sentiment.py');
     
-    const command = `python3 "${scriptPath}" "${ProductName}" "${ProductLocation}"`;
-    
+    const command = ProductLocation 
+    ? `python3 "${scriptPath}" "${ProductName}" "${ProductLocation}"`
+    : `python3 "${scriptPath}" "${ProductName}"`;
+
     const options = {
         timeout: 6000000,
         maxBuffer: 1024 * 1024
@@ -41,7 +43,7 @@ const analyzeSentiment = (req, res) => {
         }
     });
 };
-
+ 
 const analyzePlayStoreSentiment = (req, res) => {
     const appName = req.params.appName;
     
