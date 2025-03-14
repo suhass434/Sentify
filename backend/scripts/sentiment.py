@@ -557,7 +557,7 @@ class LocationBasedAnalyzer(EnhancedContentAnalyzer):
         unique_indices = self.deduplicate_content(unique_texts)
         content_items = [all_content[i] for i in unique_indices]
         
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=2) as executor:
             futures = {}
             analyzed_content = []
             for item in content_items:
