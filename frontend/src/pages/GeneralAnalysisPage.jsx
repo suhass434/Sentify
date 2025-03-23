@@ -86,26 +86,29 @@ const GeneralAnalysisPage = () => {
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Analysis Results</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="card">
-                <SentimentResultCard 
-                  score={result.score || 0}
-                  label={result.label || 'Unknown'}
-                  title={`Sentiment for ${platform}`}
-                />
-              </div>
-              
-              <div className="card">
-                <h3 className="font-medium mb-4">Sentiment Distribution</h3>
-                <SentimentChart 
-                  type="pie"
-                  data={{
-                    positive: result.distribution?.positive || 0,
-                    neutral: result.distribution?.neutral || 0,
-                    negative: result.distribution?.negative || 0
-                  }}
-                />
-              </div>
+            <div className="card">
+              <SentimentResultCard 
+                score={Math.round(result.average_sentiment * 100) || 0}
+                label={result.sentiment_label || 'Unknown'}
+                title={`Sentiment for ${platform}`}
+              />
             </div>
+            
+            <div className="card">
+              <h3 className="font-medium mb-4">Sentiment Distribution</h3>
+              <SentimentChart 
+                type="pie"
+                data={{
+                  positive: result.analyzed_content.filter(item => 
+                    item.sentiment?.label === 'Positive').length,
+                  neutral: result.analyzed_content.filter(item => 
+                    item.sentiment?.label === 'Neutral').length,
+                  negative: result.analyzed_content.filter(item => 
+                    item.sentiment?.label === 'Negative').length
+                }}
+              />
+            </div>
+          </div>
             
             {result.insights && result.insights.length > 0 && (
               <div className="card mt-6">
@@ -127,9 +130,24 @@ const GeneralAnalysisPage = () => {
                 <div className="h-80">
                   <SentimentChart 
                     type="bar"
-                    data={result.aspects}
+                    data={Object.fromEntries(
+                      Object.entries(result.aspects).map(([aspect, data]) => [
+                        aspect, 
+                        data.avg_score * 100 || 0
+                      ])
+                    )}
                     title="Aspect Scores"
                   />
+                </div>
+              </div>
+            )}
+            {result.summary && (
+              <div className="card mt-6">
+                <h3 className="font-medium mb-4">Key Insights</h3>
+                <div className="prose max-w-none">
+                  {result.summary.split('\n').map((line, index) => (
+                    <p key={index} className="mb-2">{line}</p>
+                  ))}
                 </div>
               </div>
             )}
